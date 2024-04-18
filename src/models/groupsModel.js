@@ -7,7 +7,7 @@ const GroupSchema = mongoose.Schema({
   },
   image: {
     type: String,
-    required: true,
+    // required: true,
   },
   members: [{ type: mongoose.Schema.Types.ObjectId, ref: "users" }],
   message: [{ type: mongoose.Schema.Types.ObjectId, ref: "Messages" }],

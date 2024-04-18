@@ -2,11 +2,13 @@ const GroupModel = require("../models/groupsModel");
 const UserModel = require("../models/userModel");
 const createGroup = async (req, res, next) => {
   try {
-    const { name, image, members, message, messages, role, uid } = req.body;
+    const { image, members, message, messages, role } = req.body;
+    const { name, uid } = req.query;
     console.log("name", name);
-    console.log("role", role);
+    console.log("uid", uid);
+    const groupName = name || "Nhóm mới";
     const group = new GroupModel({
-      name,
+      name: groupName,
       image,
       members,
       message,
@@ -20,8 +22,7 @@ const createGroup = async (req, res, next) => {
     if (group) {
       const user = await UserModel.findById(uid);
       if (user) {
-        user.groups.push(group._id);
-        await user.save();
+        await Promise.all([user.groups.push(group._id), user.save()]);
       }
 
       return res.json({ msg: "Group added successfully.", data: group });
