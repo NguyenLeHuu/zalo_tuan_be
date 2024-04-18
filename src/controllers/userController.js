@@ -30,11 +30,10 @@ const getUsers = async (req, res) => {
 };
 const findUserByEmail = async (req, res, next) => {
   try {
-    const { email } = req.params; // Lấy địa chỉ email từ request params
-    // Tìm kiếm người dùng trong cơ sở dữ liệu
+    const { email } = req.params;
+    // console.log("email ", email);
     const user = await UserModel.findOne({ email });
 
-    // Kiểm tra xem người dùng có tồn tại không
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -54,8 +53,8 @@ const findUserByEmail = async (req, res, next) => {
 
 const sendFriendRequest = async (req, res, next) => {
   try {
-    const { senderId, receiverId } = req.body;
-    // Tìm người gửi và người nhận
+    const { senderId, receiverId } = req.query;
+    console.log("senderId", senderId);
     const sender = await UserModel.findById(senderId);
     console.log(sender);
     const receiver = await UserModel.findById(receiverId);
@@ -80,7 +79,7 @@ const sendFriendRequest = async (req, res, next) => {
 
     return res.json({ message: "Lời mời kết bạn đã được gửi thành công" });
   } catch (error) {
-    next(error);
+    console.log(error);
   }
 };
 
@@ -147,11 +146,10 @@ const acceptFriendRequestAndSendMessage = async (req, res, next) => {
 const getFriends = async (req, res) => {
   try {
     const { userId } = req.params;
-    const user = await UserModel.findById(userId)
-      .populate({
-        path: "friends",
-        select: "_id fullname email photoUrl gender dateOfBirth"
-      });
+    const user = await UserModel.findById(userId).populate({
+      path: "friends",
+      select: "_id fullname email photoUrl gender dateOfBirth",
+    });
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
@@ -160,7 +158,7 @@ const getFriends = async (req, res) => {
     console.log(error);
     res.status(500).json({ error: "Internal server error" });
   }
-}
+};
 
 module.exports = {
   findUser,
@@ -168,5 +166,5 @@ module.exports = {
   findUserByEmail,
   sendFriendRequest,
   acceptFriendRequestAndSendMessage,
-  getFriends
+  getFriends,
 };

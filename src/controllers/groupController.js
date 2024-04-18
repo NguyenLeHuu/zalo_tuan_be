@@ -2,10 +2,16 @@ const GroupModel = require("../models/groupsModel");
 const UserModel = require("../models/userModel");
 const createGroup = async (req, res, next) => {
   try {
-    const { image, members, message, messages, role } = req.body;
+    const { image, members, message, messages, role, selectedMembers } =
+      req.body;
     const { name, uid } = req.query;
     console.log("name", name);
     console.log("uid", uid);
+    console.log("selectedMembers", selectedMembers);
+    const selectedMemberIds = Object.keys(selectedMembers).filter(
+      (key) => selectedMembers[key] === true
+    );
+
     const groupName = name || "Nhóm mới";
     const group = new GroupModel({
       name: groupName,
@@ -15,18 +21,14 @@ const createGroup = async (req, res, next) => {
       messages,
       role,
     });
-    console.log("group", group);
 
     await group.save();
 
-    if (group) {
-      const user = await UserModel.findById(uid);
-      if (user) {
-        await Promise.all([user.groups.push(group._id), user.save()]);
-      }
-
-      return res.json({ msg: "Group added successfully.", data: group });
-      // return res.json({ msg: "Group added successfully." });
+    const group1 = await GroupModel.findById(group._id);
+    if (group1) {
+      group1.members.push(...selectedMemberIds);
+      await group1.save();
+      return res.json({ msg: "Group added successfully.", data: group1 });
     } else {
       return res.json({ msg: "Failed to add group to the database" });
     }
@@ -38,10 +40,16 @@ const addMember = async (req, res) => {
   try {
     const { groupId } = req.params;
     const { selectedMembers } = req.body;
-    console.log("Member", selectedMembers);
+    console.log("groupId", groupId);
+
+    const selectedMemberIds = Object.keys(selectedMembers).filter(
+      (key) => selectedMembers[key] === true
+    );
+
+    console.log("Member", selectedMemberIds);
     const group = await GroupModel.findById(groupId);
     if (group) {
-      group.members.push(...selectedMembers);
+      group.members.push(...selectedMemberIds);
       await group.save();
       return res.json({ msg: "Group add members successfully.", data: group });
     } else {
@@ -134,6 +142,60 @@ const getGroupAll = async (req, res, next) => {
     next(ex);
   }
 };
+const sendMsg = async (req, res) => {
+  try {
+    const { groupId, sender, type, text, file, replyToTxt, replyToId } =
+      req.body;
+    console.log("groupid ", groupId);
+    console.log("groupid ", sender);
+    console.log("text ", text);
+    let group = await GroupModel.findById(groupId);
+
+    if (group) {
+      let newMessage = {
+        sender,
+        type,
+        text,
+        isRemove: false,
+        file,
+        replyToTxt,
+        replyToId,
+      };
+
+      await Promise.all([
+        await group.messages.push(newMessage),
+        await group.save(),
+      ]);
+
+      res.status(201).json({ message: "Tin nhắn đã được lưu thành công" });
+    } else {
+      res.status(501).json({ message: "Nhóm không còn tồn tại" });
+    }
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Lỗi khi lưu tin nhắn", error: error.message });
+  }
+};
+
+const removeMsg = async (req, res) => {
+  try {
+    const { groupId, msgId } = req.body;
+
+    console.log("groupId ", groupId);
+    console.log("msgid ", msgId);
+    const resu = await GroupModel.findOneAndUpdate(
+      { _id: groupId, "messages._id": msgId },
+      { $set: { "messages.$.isRemove": true } }
+    );
+    console.log("resu: ", resu);
+    res.status(200).json({ message: "Xóa thành công" });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Lỗi khi xóa tin nhắn", error: error.message });
+  }
+};
 
 module.exports = {
   createGroup,
@@ -142,4 +204,6 @@ module.exports = {
   getGroup,
   appointDeputy,
   getGroupAll,
+  sendMsg,
+  removeMsg,
 };
